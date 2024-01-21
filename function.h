@@ -18,6 +18,7 @@
 #define P (2*MOrder+1)
 #define zp_N L*(data_L/2)
 #define FFT_N 2048
+#define trim_length (M+2*MOrder-1)
 
 
 typedef double complex cplx;
@@ -43,7 +44,6 @@ struct WaveHeader
 
 float hamming(int N, int n);
 float low_pass(int m, int n);
-void overlap_add(short *in, short *out, short *pre);
 void fft(cplx buf[], cplx out[], int n);
 void ifft(cplx buf[], cplx out[], int n);
 

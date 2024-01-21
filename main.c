@@ -35,6 +35,10 @@ int main(){
 
     fft(h,H,FFT_N);
 
+    // for(i=0;i<FFT_N;i++){
+    //     H[i] = H[i]*80.0; 
+    // }
+
     // for (int i = 0; i < FFT_N; i++) {
     //     printf("(%f, %f)\n", creal(H[i]), cimag(H[i]));
     // }
@@ -54,14 +58,19 @@ int main(){
     short prev_L[P-1] = {0};        //overlap and add
     short prev_R[P-1] = {0};        //overlap and add
 
-    cplx temp_zp_xl [FFT_N] ;
+    cplx temp_zp_xl [FFT_N] = {0.0};
     cplx temp_zp_xr [FFT_N] = {0.0};
-    cplx temp_XL [FFT_N] ;
+    cplx temp_XL [FFT_N] = {0.0};
     cplx temp_XR [FFT_N] = {0.0};
     cplx H_L [FFT_N];                       //經過lpf 左聲道
     cplx H_R [FFT_N];                       //經過lpf 右聲道
     cplx h_L [FFT_N] = {0.0};                       //經過lpf ifft 左聲道
     cplx h_R [FFT_N] = {0.0};                       //經過lpf ifft 右聲道
+    short trim_xl [trim_length] = {0};
+    short trim_xr [trim_length] = {0};
+    short ready_out_L [441*80];
+    short ready_out_R [441*80];
+
 
 
     int m = 0;
@@ -72,6 +81,12 @@ int main(){
             data_zp_L[(i*L)/2] = (float) data_read[i];
             data_zp_R[(i*L)/2] = (float) data_read[i+1];
         }
+
+        for(int b = 0;b<(P-1);b++){
+            prev_L[b] = 0;
+            prev_R[b] = 0;
+        }
+
 
         for(int a = 0;a<80;a++){
 
@@ -93,37 +108,36 @@ int main(){
             ifft(H_L,h_L,FFT_N);
             ifft(H_R,h_R,FFT_N);
 
+            for(i = 0;i<trim_length; i++){
+                trim_xl[i] = (short)creal(h_L[i]);
+                trim_xr[i] = (short)creal(h_R[i]);
+            }
 
+            //Add previous
+            for(i = 0;i<1024;i++){
+                trim_xl[i] = trim_xl[i]+prev_L[i];
+                trim_xr[i] = trim_xr[i]+prev_R[i];
+            }
 
+            for(i = 441; i<trim_length;i++){
+                prev_L[i-441] = trim_xl[i];
+                prev_R[i-441] = trim_xr[i];
+            }
+            for(i = 0;i<441;i++){
+                ready_out_L[i+a*441] =  trim_xl[i];
+                ready_out_R[i+a*441] =  trim_xr[i];
+            }
+        }
+
+        for(i=0;i<(441*80);i++){
+            if((i%M)==0){
+                fwrite(ready_out_L+i, sizeof(short), 1, fp_out);
+                fwrite(ready_out_L+i, sizeof(short), 1, fp_out);
+            }
         }
 
 
-        // for(i = count;i<FFT_N;i++){
-        //     data_zp_L[i] =  0.0;
-        //     data_zp_R[i] =  0.0;
-        // }
 
-
-
-
-
-
-        // if(m==230){
-        //     for(i=0;i<FFT_N;i++){
-        //             printf("%d\n",i);
-        //             printf("(%f, %f)\n", creal(h_L[i]), cimag(h_L[i]));
-        //     }
-        // }
-
-        // /*overlap and add*/
-        // overlap_add(lpf_L , out_L , prev_L);
-        // overlap_add(lpf_R , out_R , prev_R);
-
-
-        // for(i=0;i<L;i++) {
-        //     fwrite(out_L+i, sizeof(short), 1, fp_out);
-        //     fwrite(out_R+i, sizeof(short), 1, fp_out);
-        // }
         m++;
     }
 

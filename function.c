@@ -20,30 +20,6 @@ float low_pass(int m, int n)
 }
 
 
-void overlap_add(short *in, short *out, short *pre){
-	int i ;
-    for(i = 0;i<(P-1);i++){				//Add previous array
-        in[i] = in[i]+pre[i];
-    }
-
-	int index = 0;
-    for(i=zp_N;i<(zp_N+P-1);i++){		//Copy last P-1 data to previous array
-        pre[index] = in[i];
-        index++;
-    }
-
-	int index2 = 0;						//down-sampling output
-	for (i = 0;i<zp_N;i++){
-		if((i%M)==0){
-			out[index2] = in[i];
-			index2++;
-		}
-	}
-}
-
-
-
-
 
 // FFT
 void fft(cplx buf[], cplx out[], int n) {
