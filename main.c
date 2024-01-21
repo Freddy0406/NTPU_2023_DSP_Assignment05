@@ -10,14 +10,9 @@ int main(){
     int wav_time = Wavin_head.DATALen/Wavin_head.bytepsec;                  //計算音檔長度(單位：秒)
 
     short *data_read = (short*)malloc(sizeof(short)*(data_L));              //讀取wav雙聲道        
-    cplx data_zp_L [FFT_N];                 //zero padding 左聲道
-    cplx data_zp_R [FFT_N];                 //zero padding 右聲道
-    cplx fft_L [FFT_N];                     //zero padding through fft 左聲道
-    cplx fft_R [FFT_N];                     //zero padding through fft 右聲道
-    cplx H_L [FFT_N];                       //經過lpf 左聲道
-    cplx H_R [FFT_N];                       //經過lpf 右聲道
-    cplx h_L [FFT_N] = {0.0};                       //經過lpf ifft 左聲道
-    cplx h_R [FFT_N] = {0.0};                       //經過lpf ifft 右聲道
+    cplx data_zp_L [zp_N];                 //zero padding 左聲道
+    cplx data_zp_R [zp_N];                 //zero padding 右聲道
+
     int n,i;
 
     /*Create LPF coefficient*/
@@ -59,37 +54,66 @@ int main(){
     short prev_L[P-1] = {0};        //overlap and add
     short prev_R[P-1] = {0};        //overlap and add
 
+    cplx temp_zp_xl [FFT_N] ;
+    cplx temp_zp_xr [FFT_N] = {0.0};
+    cplx temp_XL [FFT_N] ;
+    cplx temp_XR [FFT_N] = {0.0};
+    cplx H_L [FFT_N];                       //經過lpf 左聲道
+    cplx H_R [FFT_N];                       //經過lpf 右聲道
+    cplx h_L [FFT_N] = {0.0};                       //經過lpf ifft 左聲道
+    cplx h_R [FFT_N] = {0.0};                       //經過lpf ifft 右聲道
+
+
     int m = 0;
     while( fread(data_read, sizeof(short), data_L, fp) ) {
-        /*convert data type*/
+        /*convert data type & zero padding*/
         int count = 0;
         for(i=0;i<(data_L);i+=2) {
-            data_zp_L[count] = (float) data_read[i];
-            data_zp_R[count] = (float) data_read[i+1];
-            count++;
-        }
-        /*zero padding*/
-        for(i = count;i<FFT_N;i++){
-            data_zp_L[i] =  0.0;
-            data_zp_R[i] =  0.0;
+            data_zp_L[(i*L)/2] = (float) data_read[i];
+            data_zp_R[(i*L)/2] = (float) data_read[i+1];
         }
 
-        fft(data_zp_L,fft_L,FFT_N);
-        fft(data_zp_R,fft_R,FFT_N);
+        for(int a = 0;a<80;a++){
 
-        for(i = 0;i<FFT_N;i++){
-            H_L[i] = fft_L[i]*H[i];
-            H_R[i] = fft_R[i]*H[i];
-        }
-
-        ifft(H_L,h_L,FFT_N);
-        ifft(H_R,h_R,FFT_N);
-        if(m==230){
-            for(i=0;i<FFT_N;i++){
-                    printf("%d\n",i);
-                    printf("(%f, %f)\n", creal(h_L[i]), cimag(h_L[i]));
+            for(i = 0;i<441;i++){
+                temp_zp_xl[i] = data_zp_L[i+441*a];             //抓出441筆資料
+                temp_zp_xr[i] = data_zp_R[i+441*a];             //抓出441筆資料
             }
+
+            fft(temp_zp_xl,temp_XL,FFT_N);
+            fft(temp_zp_xr,temp_XR,FFT_N);
+
+
+            //頻域相乘 = 時域convolution
+            for(i = 0;i<FFT_N;i++){
+                H_L[i] = temp_XL[i]*H[i];               //2048 points
+                H_R[i] = temp_XR[i]*H[i];               //2048 points
+            }
+
+            ifft(H_L,h_L,FFT_N);
+            ifft(H_R,h_R,FFT_N);
+
+
+
         }
+
+
+        // for(i = count;i<FFT_N;i++){
+        //     data_zp_L[i] =  0.0;
+        //     data_zp_R[i] =  0.0;
+        // }
+
+
+
+
+
+
+        // if(m==230){
+        //     for(i=0;i<FFT_N;i++){
+        //             printf("%d\n",i);
+        //             printf("(%f, %f)\n", creal(h_L[i]), cimag(h_L[i]));
+        //     }
+        // }
 
         // /*overlap and add*/
         // overlap_add(lpf_L , out_L , prev_L);
