@@ -2,23 +2,27 @@
 
 int main(){
 
-    FILE *fp = fopen("test.wav", "rb");                                    //讀入音檔
+    FILE *fp = fopen("input.wav", "rb");                                    //讀入音檔
     FILE *fp_out = fopen("output.wav", "wb");                               //開啟輸出檔案
     struct WaveHeader Wavin_head;                                           //儲存讀入wave之標頭
     struct WaveHeader Wavout_head;                                          //儲存輸出wave之標頭
     fread(&Wavin_head,sizeof(Wavin_head),1,fp);                             //讀入wave標頭
     int wav_time = Wavin_head.DATALen/Wavin_head.bytepsec;                  //計算音檔長度(單位：秒)
 
-    short *data_read = (short*)malloc(sizeof(short)*(data_L));              //讀取wav雙聲道        
-    cplx data_zp_L [zp_N];                 //zero padding 左聲道
-    cplx data_zp_R [zp_N];                 //zero padding 右聲道
+    short *data_read = (short*)malloc(sizeof(short)*(data_L));              //讀取wav雙聲道
+    cplx *data_zp_L = (cplx*)calloc(zp_N,sizeof(cplx));        
+    // cplx data_zp_L [zp_N];                 //zero padding 左聲道
+    cplx *data_zp_R = (cplx*)calloc(zp_N,sizeof(cplx));
+    // cplx data_zp_R [zp_N];                 //zero padding 右聲道
 
     int n,i;
 
     /*Create LPF coefficient*/
     FILE *fptxt  = fopen("h.txt","w+");                                     //開啟txt檔以寫入LPF coeficient
-    cplx h [FFT_N];                             //儲存LPF
-    cplx H [FFT_N] = {0};                             //儲存fft後的LPF
+    cplx *h = (cplx*)calloc(FFT_N,sizeof(cplx));
+    // cplx h [FFT_N];                                     //儲存LPF
+    cplx *H = (cplx*)calloc(FFT_N,sizeof(cplx));
+    // cplx H [FFT_N] = {0};                               //儲存fft後的LPF
     /*Make LPF*/
     for(n=0;n<FFT_N;n++) {
         if(n<P){
@@ -52,24 +56,24 @@ int main(){
     fwrite(&Wavout_head,sizeof(Wavout_head),1,fp_out);              //Write output wave header
 
 
-    short *out_L = (short*)calloc(L,sizeof(short));                 //output 左聲道
-    short *out_R = (short*)calloc(L,sizeof(short));                 //output 右聲道
 
     short prev_L[P-1] = {0};        //overlap and add
     short prev_R[P-1] = {0};        //overlap and add
 
-    cplx temp_zp_xl [FFT_N] = {0.0};
-    cplx temp_zp_xr [FFT_N] = {0.0};
-    cplx temp_XL [FFT_N] = {0.0};
-    cplx temp_XR [FFT_N] = {0.0};
-    cplx H_L [FFT_N];                       //經過lpf 左聲道
-    cplx H_R [FFT_N];                       //經過lpf 右聲道
-    cplx h_L [FFT_N] = {0.0};                       //經過lpf ifft 左聲道
-    cplx h_R [FFT_N] = {0.0};                       //經過lpf ifft 右聲道
-    short trim_xl [trim_length] = {0};
-    short trim_xr [trim_length] = {0};
-    short ready_out_L [441*80];
-    short ready_out_R [441*80];
+    cplx *temp_zp_xl = (cplx*)calloc(FFT_N,sizeof(cplx));
+    cplx *temp_zp_xr = (cplx*)calloc(FFT_N,sizeof(cplx));
+    cplx *temp_XL = (cplx*)calloc(FFT_N,sizeof(cplx));
+    cplx *temp_XR = (cplx*)calloc(FFT_N,sizeof(cplx));
+    cplx *H_L = (cplx*)calloc(FFT_N,sizeof(cplx));          //經過lpf 左聲道
+    cplx *H_R = (cplx*)calloc(FFT_N,sizeof(cplx));          //經過lpf 右聲道
+    cplx *h_L = (cplx*)calloc(FFT_N,sizeof(cplx));          //經過lpf ifft 左聲道
+    cplx *h_R = (cplx*)calloc(FFT_N,sizeof(cplx));          //經過lpf ifft 右聲道
+
+    short *trim_xl = (short*)calloc(trim_length,sizeof(short));
+    short *trim_xr = (short*)calloc(trim_length,sizeof(short));
+                     
+    short *ready_out_L = (short*)calloc((M*L),sizeof(short));
+    short *ready_out_R = (short*)calloc((M*L),sizeof(short));
 
 
 
@@ -136,14 +140,26 @@ int main(){
             }
         }
 
-
-
         m++;
     }
 
     free(data_read);
-    free(out_L);
-    free(out_R);
+    free(data_zp_L);
+    free(data_zp_R);
+    free(h);
+    free(H);
+    free(temp_zp_xr);
+    free(temp_zp_xl);
+    free(temp_XL);
+    free(temp_XR);
+    free(H_L);
+    free(H_R);
+    free(h_L);
+    free(h_R);
+    free(trim_xl);
+    free(trim_xr);
+    free(ready_out_L);
+    free(ready_out_R);
     fclose(fp);
     fclose(fp_out);
 
